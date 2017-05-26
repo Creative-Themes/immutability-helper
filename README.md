@@ -55,5 +55,5 @@ An nice introduction to commands API is available in original [`immutability-hel
 [travis-url]: https://travis-ci.org/kolodny/immutability-helper
 [coveralls-image]: https://img.shields.io/coveralls/kolodny/immutability-helper.svg?style=flat-square
 [coveralls-url]: https://coveralls.io/r/kolodny/immutability-helper
-[downloads-image]: http://img.shields.io/npm/dm/immutability-helper.svg?style=flat-square
-[downloads-url]: https://npmjs.org/package/immutability-helper
+[downloads-image]: http://img.shields.io/npm/dm/mutability-helper.svg?style=flat-square
+[downloads-url]: https://npmjs.org/package/mutability-helper
