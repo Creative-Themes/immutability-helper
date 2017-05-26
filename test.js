@@ -38,7 +38,7 @@ describe('update', function() {
 
   describe('$unshift', function() {
     it('unshifts', function() {
-      let originalData = [1];
+      var originalData = [1];
       update(originalData, {$unshift: [7]});
 
       expect(originalData).toEqual([7, 1]);
