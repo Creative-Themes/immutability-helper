@@ -1,3 +1,9 @@
+# VERY IMPORTANT
+
+This fork makes the data mutable. It specifically executes commands onto the data that was passed as the first argument.
+We did that just because we actually wanted to mutate some data and the commands from the original
+`immutability-helper` were very convenient for that purpose.
+
 immutability-helper
 ===
 
