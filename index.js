@@ -18,13 +18,8 @@ var getAllKeys = typeof Object.getOwnPropertySymbols === 'function' ?
 
 /* istanbul ignore next */
 function copy(object) {
-  if (object instanceof Array) {
-    return object.slice();
-  } else if (object && typeof object === 'object') {
-    return assign(new object.constructor(), object);
-  } else {
-    return object;
-  }
+  // The data is no longer immutable. We explicitly bypass that in a hacky way
+  return object;
 }
 
 function newContext() {
