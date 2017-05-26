@@ -1,6 +1,6 @@
 {
   "name": "mutability-helper",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "mutate a copy of data with a convenient commands",
   "main": "index.js",
   "scripts": {
