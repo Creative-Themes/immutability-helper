@@ -16,6 +16,17 @@ var getAllKeys = typeof Object.getOwnPropertySymbols === 'function' ?
   function(obj) { return Object.keys(obj).concat(Object.getOwnPropertySymbols(obj)) } :
   /* istanbul ignore next */ function(obj) { return Object.keys(obj) };
 
+/* istanbul ignore next */
+function copy(object) {
+  if (object instanceof Array) {
+    return object.slice();
+  } else if (object && typeof object === 'object') {
+    return assign(new object.constructor(), object);
+  } else {
+    return object;
+  }
+}
+
 function newContext() {
   var commands = assign({}, defaultCommands);
   update.extend = function(directive, fn) {
@@ -24,7 +35,7 @@ function newContext() {
 
   return update;
 
-  function update(object, spec) {
+  function update(object, spec, originalSpec, originalObject) {
     if (!(Array.isArray(object) && Array.isArray(spec))) {
       invariant(
         !Array.isArray(spec),
@@ -42,23 +53,17 @@ function newContext() {
       Object.keys(commands).join(', ')
     );
 
-    var nextObject = object;
     var specKeys = getAllKeys(spec);
-    var index, key;
+
     getAllKeys(spec).forEach(function(key) {
       if (hasOwnProperty.call(commands, key)) {
-        nextObject = commands[key](spec[key], nextObject, spec, object);
+        commands[key](spec[key], object, spec, originalSpec || spec, originalObject || object);
       } else {
-        var nextValueForKey = update(object[key], spec[key]);
-        if (nextValueForKey !== nextObject[key]) {
-          if (nextObject === object) {
-            nextObject = object;
-          }
-          nextObject[key] = nextValueForKey;
-        }
+        update(object[key], spec[key], originalSpec || spec, originalObject || object);
       }
     })
-    return nextObject;
+
+    return object;
   }
 
 }
@@ -66,54 +71,112 @@ function newContext() {
 var defaultCommands = {
   $push: function(value, nextObject, spec) {
     invariantPushAndUnshift(nextObject, spec, '$push');
-    return value.length ? nextObject.concat(value) : nextObject;
+
+    nextObject.push[
+      value.length ? 'apply' : 'call'
+    ](nextObject, value)
   },
-  $unshift: function(value, nextObject, spec) {
-    invariantPushAndUnshift(nextObject, spec, '$unshift');
-    return value.length ? value.concat(nextObject) : nextObject;
+
+  $unshift: function(value, object, spec) {
+    invariantPushAndUnshift(object, spec, '$unshift');
+    object.unshift.apply(object, value);
   },
-  $splice: function(value, nextObject, spec, originalObject) {
-    invariantSplices(nextObject, spec);
+
+  $splice: function(value, object, spec) {
+    invariantSplices(object, spec);
+
     value.forEach(function(args) {
       invariantSplice(args);
-      if (nextObject === originalObject && args.length) nextObject = originalObject;
-      splice.apply(nextObject, args);
+      splice.apply(object, args);
     });
-    return nextObject;
   },
-  $set: function(value, nextObject, spec) {
-    invariantSet(spec);
-    return value;
+
+  $set: function(value, object, spec, originalSpec, originalObject) {
+    invariantSet(spec, originalSpec);
+
+    var stack = searchForSubnode("", originalObject, object);
+
+    if (! stack) {
+      throw "$set path not found"
+    }
+
+    stack = stack.split('/');
+
+    stack.splice(0, 1);
+
+    var pointer = originalObject; // points to the current nested object
+
+    for (var i = 0, len = stack.length; i < len; i++) {
+        var path = stack[i];
+
+        if (pointer.hasOwnProperty(path)) {
+            if (i === len - 1) { // terminating condition
+                pointer[path] = value;
+            } else {
+                pointer = pointer[path];
+            }
+        } else {
+          throw "$set path not found"
+        }
+    }
   },
-  $unset: function(value, nextObject, spec, originalObject) {
+
+  $unset: function(value, object, spec, originalSpec, originalObject) {
     invariant(
       Array.isArray(value),
       'update(): expected spec of $unset to be an array; got %s. ' +
       'Did you forget to wrap the key(s) in an array?',
       value
     );
+
     value.forEach(function(key) {
-      if (Object.hasOwnProperty.call(nextObject, key)) {
-        if (nextObject === originalObject) nextObject = originalObject;
-        delete nextObject[key];
+      if (Object.hasOwnProperty.call(object, key)) {
+        delete object[key];
       }
     });
-    return nextObject;
   },
-  $merge: function(value, nextObject, spec, originalObject) {
-    invariantMerge(nextObject, value);
+
+  $merge: function(value, object, spec) {
+    invariantMerge(object, value);
+
     getAllKeys(value).forEach(function(key) {
-      if (value[key] !== nextObject[key]) {
-        if (nextObject === originalObject) nextObject = originalObject;
-        nextObject[key] = value[key];
+      if (value[key] !== object[key]) {
+        object[key] = value[key];
       }
     });
-    return nextObject;
   },
-  $apply: function(value, original) {
-    invariantApply(value);
-    return value(original);
-  }
+
+  $apply: function(fn, object, spec, originalSpec, originalObject) {
+    invariantApply(fn, spec, originalSpec);
+
+    var stack = searchForSubnode("", originalObject, object);
+
+    if (! stack) {
+      throw "$set path not found"
+    }
+
+    stack = stack.split('/');
+
+    stack.splice(0, 1);
+
+    var pointer = originalObject; // points to the current nested object
+
+    for (var i = 0, len = stack.length; i < len; i++) {
+        var path = stack[i];
+
+        if (pointer.hasOwnProperty(path)) {
+            if (i === len - 1) { // terminating condition
+                pointer[path] = fn(pointer[path]);
+            } else {
+                pointer = pointer[path];
+            }
+        } else {
+          if (! object) {
+            throw "$set path not found"
+          }
+        }
+    }
+  },
 };
 
 module.exports = newContext();
@@ -156,18 +219,28 @@ function invariantSplice(value) {
   );
 }
 
-function invariantApply(fn) {
+function invariantApply(fn, spec, originalSpec) {
   invariant(
     typeof fn === 'function',
     'update(): expected spec of $apply to be a function; got %s.',
     fn
   );
+
+  invariant(
+    (spec !== originalSpec && !originalSpec['$apply']),
+    '$apply should be nested in an accessor'
+  );
 }
 
-function invariantSet(spec) {
+function invariantSet(spec, originalSpec) {
   invariant(
     Object.keys(spec).length === 1,
     'Cannot have more than one key in an object with $set'
+  );
+
+  invariant(
+    (spec !== originalSpec && !originalSpec['$set']),
+    '$set should be nested in an accessor'
   );
 }
 
@@ -183,3 +256,21 @@ function invariantMerge(target, specValue) {
     target
   );
 }
+
+
+// https://stackoverflow.com/questions/8790607/javascript-json-get-path-to-given-subnode
+function searchForSubnode(path, obj, target) {
+    for (var k in obj) {
+        if (obj.hasOwnProperty(k))
+            if (obj[k] === target)
+                return path + '/' + k;
+            else if (typeof obj[k] === "object") {
+                var result = searchForSubnode(path + '/' + k, obj[k], target);
+                if (result)
+                    return result;
+            }
+    }
+
+    return false;
+}
+

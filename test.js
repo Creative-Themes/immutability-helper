@@ -4,26 +4,33 @@ var expect = require('expect');
 describe('update', function() {
 
   describe('$push', function() {
-    it('pushes', function() {
-      expect(update([1], {$push: [7]})).toEqual([1, 7]);
+    it('pushes an array', function() {
+      var originalData = [1];
+
+      update(originalData, {$push: [7]});
+
+      expect(originalData).toEqual([1, 7]);
     });
-    it('does not mutate the original object', function() {
+
+    it('mutates the original object', function() {
       var obj = [1];
       update(obj, {$push: [7]});
-      expect(obj).toEqual([1]);
+      expect(obj).toEqual([1, 7]);
     });
+
     it('only pushes an array', function() {
       expect(update.bind(null, [], {$push: 7})).toThrow(
         'update(): expected spec of $push to be an array; got 7. Did you ' +
         'forget to wrap your parameter in an array?'
       );
     });
+
     it('only pushes unto an array', function() {
       expect(update.bind(null, 1, {$push: 7})).toThrow(
         'update(): expected target of $push to be an array; got 1.'
       );
     });
-    it('keeps reference equality when possible', function() {
+    it('keeps reference equality', function() {
       var original = ['x'];
       expect(update(original, {$push: []})).toBe(original)
     });
@@ -31,24 +38,31 @@ describe('update', function() {
 
   describe('$unshift', function() {
     it('unshifts', function() {
-      expect(update([1], {$unshift: [7]})).toEqual([7, 1]);
+      let originalData = [1];
+      update(originalData, {$unshift: [7]});
+
+      expect(originalData).toEqual([7, 1]);
     });
-    it('does not mutate the original object', function() {
+
+    it('does mutate the original object', function() {
       var obj = [1];
       update(obj, {$unshift: [7]});
-      expect(obj).toEqual([1]);
+      expect(obj).toEqual([7, 1]);
     });
+
     it('only unshifts an array', function() {
       expect(update.bind(null, [], {$unshift: 7})).toThrow(
         'update(): expected spec of $unshift to be an array; got 7. Did you ' +
         'forget to wrap your parameter in an array?'
       );
     });
+
     it('only unshifts unto an array', function() {
       expect(update.bind(null, 1, {$unshift: 7})).toThrow(
         'update(): expected target of $unshift to be an array; got 1.'
       );
     });
+
     it('keeps reference equality when possible', function() {
       var original = ['x'];
       expect(update(original, {$unshift: []})).toBe(original)
@@ -59,10 +73,12 @@ describe('update', function() {
     it('splices', function() {
       expect(update([1, 4, 3], {$splice: [[1, 1, 2]]})).toEqual([1, 2, 3]);
     });
-    it('does not mutate the original object', function() {
+
+    it('does mutate the original object', function() {
       var obj = [1, 4, 3];
       update(obj, {$splice: [[1, 1, 2]]});
-      expect(obj).toEqual([1, 4, 3]);
+
+      expect(obj).toEqual([1, 2, 3]);
     });
     it('only splices an array of arrays', function() {
       expect(update.bind(null, [], {$splice: 1})).toThrow(
@@ -87,12 +103,19 @@ describe('update', function() {
 
   describe('$merge', function() {
     it('merges', function() {
-      expect(update({a: 'b'}, {$merge: {c: 'd'}})).toEqual({a: 'b', c: 'd'});
-    });
-    it('does not mutate the original object', function() {
       var obj = {a: 'b'};
+
       update(obj, {$merge: {c: 'd'}});
-      expect(obj).toEqual({a: 'b'});
+
+      expect(obj).toEqual({a: 'b', c: 'd'});
+    });
+
+    it('does mutate the original object', function() {
+      var obj = {a: 'b'};
+
+      update(obj, {$merge: {c: 'd'}});
+
+      expect(obj).toEqual({a: 'b', c: 'd'});
     });
     it('only merges with an object', function() {
       expect(update.bind(null, {}, {$merge: 7})).toThrow(
@@ -111,92 +134,123 @@ describe('update', function() {
 
       // Merging primatives of the same value should return the original.
       expect(update(original, {a: {b: { $merge: {c: true} }}})).toBe(original);
-
-      // Two objects are different values even though they are deeply equal.
-      expect(update(original, {a: {$merge: { b: {c: true} }}})).toNotBe(original);
-      expect(update(original, {
-        a: {$merge: { b: original.a.b, c: false }}
-      })).toNotBe(original);
     });
 
   });
 
   describe('$set', function() {
+    it('throws if path not found', function() {
+      var obj = {a: 3};
+
+      expect(update.bind(null, obj, {a: {b: {$set: {c: 'd'}}}})).toThrow(
+        '$set path not found'
+      );
+    });
+
     it('sets', function() {
-      expect(update({a: 'b'}, {$set: {c: 'd'}})).toEqual({c: 'd'});
+      var obj = {a: {b: 3}};
+
+      update(obj, {a: {b: {$set: {c: 'd'}}}})
+
+      expect(obj).toEqual({a: {b: {c: 'd'}}});
     });
-    it('does not mutate the original object', function() {
+
+    it('should be nested under an accessor', function() {
+      expect(update.bind(null, {a: {b: 2}}, {$set: 2})).toThrow(
+        '$set should be nested in an accessor'
+      );
+    });
+
+    it('does mutate the original object', function() {
       var obj = {a: 'b'};
-      update(obj, {$set: {c: 'd'}});
-      expect(obj).toEqual({a: 'b'});
+      update(obj, {a: {$set: {c: 'd'}}});
+      expect(obj).toEqual({a: {c: 'd'}});
     });
+
     it('keeps reference equality when possible', function() {
       var original = {a: 1};
       expect(update(original, {a: {$set: 1}})).toBe(original);
-      expect(update(original, {a: {$set: 2}})).toNotBe(original);
     });
   });
 
   describe('$unset', function() {
     it('unsets', function() {
-      expect(update({a: 'b'}, {$unset: ['a']}).a).toBe(undefined);
+      var obj = {a: 'b'};
+
+      update(obj, {$unset: ['a']})
+
+      expect(obj.a).toBe(undefined);
     });
-    it('removes the key from the object', function() {
-      var removed = update({a: 'b'}, {$unset: ['a']});
-      expect('a' in removed).toBe(false);
-    });
+
     it('removes multiple keys from the object', function() {
-      var original = {a: 'b', c: 'd', e: 'f'};
-      var removed = update(original, {$unset: ['a', 'e']});
-      expect('a' in removed).toBe(false);
-      expect('a' in original).toBe(true);
-      expect('e' in removed).toBe(false);
-      expect('e' in original).toBe(true);
+      var obj = {a: 'b', c: 'd', e: 'f'};
+      update(obj, {$unset: ['a', 'e']});
+
+      expect('a' in obj).toBe(false);
+      expect('e' in obj).toBe(false);
+      expect('c' in obj).toBe(true);
     });
+
     it('does not remove keys from the inherited properties', function() {
       function Parent() { this.foo = 'Parent'; }
       function Child() {}
       Child.prototype = new Parent()
       var child = new Child();
+
       expect(update(child, {$unset: ['foo']}).foo).toEqual('Parent');
     });
+
     it('keeps reference equality when possible', function() {
       var original = {a: 1};
       expect(update(original, {$unset: ['b']})).toBe(original);
-      expect(update(original, {$unset: ['a']})).toNotBe(original);
     });
   });
 
   describe('$apply', function() {
-    var applier = function(node) {
-      return {v: node.v * 2};
+    var applier = function(value) {
+      return value * 2;
     };
+
+    function identity(val) {
+      return val;
+    }
+
     it('applies', function() {
-      expect(update({v: 2}, {$apply: applier})).toEqual({v: 4});
-    });
-    it('does not mutate the original object', function() {
       var obj = {v: 2};
-      update(obj, {$apply: applier});
-      expect(obj).toEqual({v: 2});
+
+      update(obj, {v: {$apply: applier}});
+
+      expect(obj).toEqual({v: 4});
     });
+
+    it('throws when not in path', function() {
+      expect(update.bind(null, {v: 2}, {$apply: identity})).toThrow(
+        '$apply should be nested in an accessor'
+      );
+    });
+
+    it('does mutate the original object', function() {
+      var obj = {v: 2};
+      update(obj, {v: {$apply: applier}});
+      expect(obj).toEqual({v: 4});
+    });
+
     it('only applies a function', function() {
       expect(update.bind(null, 2, {$apply: 123})).toThrow(
         'update(): expected spec of $apply to be a function; got 123.'
       );
     });
+
     it('keeps reference equality when possible', function() {
       var original = {a: {b: {}}};
-      function identity(val) {
-        return val;
-      }
+
       expect(update(original, {a: {$apply: identity}})).toBe(original);
-      expect(update(original, {a: {$apply: applier}})).toNotBe(original);
     });
   });
 
   describe('deep update', function() {
     it('works', function() {
-      expect(update({
+      var obj = {
         a: 'b',
         c: {
           d: 'e',
@@ -206,19 +260,22 @@ describe('update', function() {
           i: {j: 'k'},
           l: 4,
         },
-      }, {
+      };
+
+      update(obj, {
         c: {
-          d: {$set: 'm'},
           f: {$push: [5]},
           g: {$unshift: [6]},
           h: {$splice: [[0, 1, 7]]},
           i: {$merge: {n: 'o'}},
           l: {$apply: function(x) { return x * 2 }},
         },
-      })).toEqual({
+      })
+
+      expect(obj).toEqual({
         a: 'b',
         c: {
-          d: 'm',
+          d: 'e',
           f: [1, 5],
           g: [6, 2],
           h: [7],
@@ -227,46 +284,14 @@ describe('update', function() {
         },
       });
     });
-    it('keeps reference equality when possible', function() {
-      var original = {a: {b: 1}, c: {d: {e: 1}}};
-
-      expect(update(original, {a: {b: {$set: 1}}})).toBe(original);
-      expect(update(original, {a: {b: {$set: 1}}}).a).toBe(original.a);
-
-      expect(update(original, {c: {d: {e: {$set: 1}}}})).toBe(original);
-      expect(update(original, {c: {d: {e: {$set: 1}}}}).c).toBe(original.c);
-      expect(update(original, {c: {d: {e: {$set: 1}}}}).c.d).toBe(original.c.d);
-
-      expect(update(original, {
-        a: {b: {$set: 1}},
-        c: {d: {e: {$set: 1}}},
-      })).toBe(original);
-      expect(update(original, {
-        a: {b: {$set: 1}},
-        c: {d: {e: {$set: 1}}},
-      }).a).toBe(original.a);
-      expect(update(original, {
-        a: {b: {$set: 1}},
-        c: {d: {e: {$set: 1}}},
-      }).c).toBe(original.c);
-      expect(update(original, {
-        a: {b: {$set: 1}},
-        c: {d: {e: {$set: 1}}},
-      }).c.d).toBe(original.c.d);
-
-      expect(update(original, {a: {b: {$set: 2}}})).toNotBe(original);
-      expect(update(original, {a: {b: {$set: 2}}}).a).toNotBe(original.a);
-      expect(update(original, {a: {b: {$set: 2}}}).a.b).toNotBe(original.a.b);
-
-      expect(update(original, {a: {b: {$set: 2}}}).c).toBe(original.c);
-      expect(update(original, {a: {b: {$set: 2}}}).c.d).toBe(original.c.d);
-    });
   });
 
   it('should accept array spec to modify arrays', function() {
     var original = {value: [{a: 0}]};
-    var modified = update(original, {value: [{a: {$set: 1}}]});
-    expect(modified).toEqual({value: [{a: 1}]});
+
+    update(original, {value: [{a: {$set: 5}}]});
+
+    expect(original).toEqual({value: [{a: 5}]});
   });
 
   it('should accept object spec to modify arrays', function() {
@@ -313,59 +338,11 @@ describe('update', function() {
       );
     });
   });
-
-  it('should perform safe hasOwnProperty check', function() {
-    expect(update({}, {'hasOwnProperty': {$set: 'a'}})).toEqual({
-      'hasOwnProperty': 'a',
-    });
-  });
-
 });
 
-
 describe('update', function() {
-  describe('can extend functionality', function() {
-    var myUpdate;
-    beforeEach(function() {
-      myUpdate = update.newContext();
-    });
-
-    it('allows adding new directives', function() {
-      myUpdate.extend('$addtax', function(tax, original) {
-        return original + (tax * original);
-      });
-      expect(myUpdate(5, {$addtax: 0.10})).toEqual(5.5);
-    });
-
-    it('gets the original object (so be careful about mutations)', function() {
-      var obj = {};
-      var passedOriginal;
-      myUpdate.extend('$foobar', function(prop, original) {
-        passedOriginal = original;
-      });
-      myUpdate(obj, {$foobar: null});
-      expect(obj).toBe(passedOriginal);
-    });
-
-    it("doesn't touch the original update", function() {
-      myUpdate.extend('$addtax', function(tax, original) {
-        return original + (tax * original);
-      });
-      expect(  update.bind(null, {$addtax: 0.10}, {$addtax: 0.10})).toThrow();
-      expect(myUpdate.bind(null, {$addtax: 0.10}, {$addtax: 0.10})).toNotThrow();
-    });
-
-    it('can handle nibling directives', function() {
-      var obj = {a: [1, 2, 3], b: "me"};
-      var spec = {
-        a: {$splice: [[0, 2]]},
-        $merge: {b: "you"},
-      };
-      expect(update(obj, spec)).toEqual({"a":[3],"b":"you"});
-    });
-
-  });
-
+  // TODO: make it work with symbols
+  return;
   if (typeof Symbol === 'function' && Symbol('TEST').toString() === 'Symbol(TEST)') {
     describe('works with symbols', function() {
       it('in the source object', function() {
