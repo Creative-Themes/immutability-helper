@@ -47,7 +47,12 @@ update(myData, {
 
 ## An Introduction to Commands
 
-An nice introduction to commands API is available in original [`immutability-helpers` repo](https://github.com/kolodny/immutability-helper#update), which also covers how to create additional commands.
+An nice introduction to commands API is available in original [`immutability-helpers` repo](https://github.com/kolodny/immutability-helper#update),
+which also covers how to create additional commands.
+
+Please not that the commands for the `mutability-helper` are a bit different from the `immutability-helpers`.
+They have to be mutable and change the `originalObject` correctly. Also, we start to pass `originalSpec` as an argument,
+it is needed sometimes for some special commands. `$set` and `$apply` have new requirements now.
 
 [npm-image]: https://img.shields.io/npm/v/mutability-helper.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/mutability-helper
