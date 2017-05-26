@@ -1,7 +1,7 @@
 {
-  "name": "immutability-helper",
-  "version": "2.2.2",
-  "description": "mutate a copy of data without changing the original source",
+  "name": "mutability-helper",
+  "version": "0.0.1",
+  "description": "mutate a copy of data with a convenient commands",
   "main": "index.js",
   "scripts": {
     "test-cov": "nyc npm test && nyc report --reporter=lcov",
@@ -9,9 +9,9 @@
     "test": "mocha test.js"
   },
   "keywords": [
-    "immutability"
+    "mutability"
   ],
-  "author": "Moshe Kolodny",
+  "author": "Andrei Glingeanu",
   "license": "MIT",
   "devDependencies": {
     "coveralls": "^2.11.6",
@@ -24,10 +24,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kolodny/immutability-helper.git"
+    "url": "git+https://github.com/Creative-Themes/mutability-helper"
   },
   "bugs": {
-    "url": "https://github.com/kolodny/immutability-helper/issues"
+    "url": "https://github.com/Creative-Themes/mutability-helper/issues"
   },
-  "homepage": "https://github.com/kolodny/immutability-helper#readme"
+  "homepage": "https://github.com/Creative-Themes/mutability-helper#readme"
 }

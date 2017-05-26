@@ -16,12 +16,6 @@ var getAllKeys = typeof Object.getOwnPropertySymbols === 'function' ?
   function(obj) { return Object.keys(obj).concat(Object.getOwnPropertySymbols(obj)) } :
   /* istanbul ignore next */ function(obj) { return Object.keys(obj) };
 
-/* istanbul ignore next */
-function copy(object) {
-  // The data is no longer immutable. We explicitly bypass that in a hacky way
-  return object;
-}
-
 function newContext() {
   var commands = assign({}, defaultCommands);
   update.extend = function(directive, fn) {
@@ -58,7 +52,7 @@ function newContext() {
         var nextValueForKey = update(object[key], spec[key]);
         if (nextValueForKey !== nextObject[key]) {
           if (nextObject === object) {
-            nextObject = copy(object);
+            nextObject = object;
           }
           nextObject[key] = nextValueForKey;
         }
@@ -82,7 +76,7 @@ var defaultCommands = {
     invariantSplices(nextObject, spec);
     value.forEach(function(args) {
       invariantSplice(args);
-      if (nextObject === originalObject && args.length) nextObject = copy(originalObject);
+      if (nextObject === originalObject && args.length) nextObject = originalObject;
       splice.apply(nextObject, args);
     });
     return nextObject;
@@ -100,7 +94,7 @@ var defaultCommands = {
     );
     value.forEach(function(key) {
       if (Object.hasOwnProperty.call(nextObject, key)) {
-        if (nextObject === originalObject) nextObject = copy(originalObject);
+        if (nextObject === originalObject) nextObject = originalObject;
         delete nextObject[key];
       }
     });
@@ -110,7 +104,7 @@ var defaultCommands = {
     invariantMerge(nextObject, value);
     getAllKeys(value).forEach(function(key) {
       if (value[key] !== nextObject[key]) {
-        if (nextObject === originalObject) nextObject = copy(originalObject);
+        if (nextObject === originalObject) nextObject = originalObject;
         nextObject[key] = value[key];
       }
     });
